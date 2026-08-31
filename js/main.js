@@ -121,8 +121,11 @@ function applyLayout() {
 		mainLayout.style.gridTemplateRows = `auto 10px ${topPercentage}% 10px 1fr`;
 	} else {
 		mainLayout.style.gridTemplateRows = "1fr";
-		const gap1 = isCollapsed ? "0px" : "14px";
-		mainLayout.style.gridTemplateColumns = `${sw}px ${gap1} ${leftPercentage}% 14px 1fr`;
+		if (isCollapsed) {
+			mainLayout.style.gridTemplateColumns = `${leftPercentage}% 14px 1fr`;
+		} else {
+			mainLayout.style.gridTemplateColumns = `${sw}px 14px ${leftPercentage}% 14px 1fr`;
+		}
 	}
 	try { document.documentElement.style.setProperty("--sidebar-w", sw + "px"); } catch {}
 }
