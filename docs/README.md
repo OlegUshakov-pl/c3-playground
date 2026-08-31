@@ -6,7 +6,6 @@
 
 **Write, compile and run [C3](https://c3-lang.org) entirely in the browser.**
 
-[![Deploy](https://github.com/manulinares/c3-playground/actions/workflows/main.yml/badge.svg)](https://github.com/manulinares/c3-playground/actions)
 [![C3](https://img.shields.io/badge/language-C3-ff7b72?style=flat)](https://c3-lang.org)
 [![License](https://img.shields.io/badge/license-MIT-94a3b8?style=flat)](#license)
 
@@ -55,7 +54,7 @@ No install. No backend. Compiler runs as WebAssembly in a Web Worker.
 ## 🚀 Quick Start
 
 ### Use online
-Just open **[manulinares.github.io/c3-playground](https://github.com/OlegUshakov-pl/c3-playground/)**.
+Just open **[olegushakov-pl.github.io/c3-playground/](https://github.com/OlegUshakov-pl/c3-playground/)**.
 
 ### Run locally (no build needed)
 
