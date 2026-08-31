@@ -18,14 +18,30 @@
 			--console-bg: #090d16;
 		}
 		[data-theme="light"] {
-			--bg-dark: #f1f5f9;
+			--bg-dark: #ffffff;
 			--panel-bg: #ffffff;
-			--border: #cbd5e1;
-			--accent: #0ea5e9;
-			--accent-hover: #0284c7;
-			--text-main: #0f172a;
-			--text-muted: #64748b;
-			--console-bg: #f8fafc;
+			--border: #d1d5db;
+			--accent: #2563eb;
+			--accent-hover: #1d4ed8;
+			--text-main: #111827;
+			--text-muted: #4b5563;
+			--console-bg: #f9fafb;
+		}
+		[data-theme="light"] body,
+		[data-theme="light"] header,
+		[data-theme="light"] main,
+		[data-theme="light"] .sidebar,
+		[data-theme="light"] .pane,
+		[data-theme="light"] .menu-dropdown,
+		[data-theme="light"] .submenu,
+		[data-theme="light"] .settings-popover,
+		[data-theme="light"] select,
+		[data-theme="light"] button {
+			background-color: #ffffff;
+		}
+		[data-theme="light"] .sidebar-header,
+		[data-theme="light"] .pane-header {
+			background: rgba(255,255,255,0.9);
 		}
 
 		* {
@@ -112,6 +128,7 @@
 			align-items: center;
 			justify-content: space-between;
 			gap: 8px;
+			box-shadow: none !important;
 		}
 		.menu-item:hover { background: rgba(56,189,248,0.12); color: var(--accent); }
 		.menu-item.active { color: var(--accent); font-weight: 600; }
@@ -136,7 +153,7 @@
 		.menu-submenu:hover .submenu,
 		.menu-submenu.open .submenu { display: flex; }
 		[data-theme="light"] .menu-dropdown,
-		[data-theme="light"] .submenu { box-shadow: rgba(0, 0, 0, 0.25) 0px 2px 2px 0px; }
+		[data-theme="light"] .submenu { box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 2px 0px; }
 
 		.docs-link {
 			font-size: 0.85rem;
@@ -152,6 +169,7 @@
 			padding: 0;
 			cursor: pointer;
 			font-family: inherit;
+			box-shadow: none !important;
 		}
 
 		.docs-link:hover {
@@ -170,8 +188,8 @@
 			padding: 8px 16px;
 			border-radius: 0;
 			border: 1px solid var(--border);
-			background: var(--bg-dark);
-			color: var(--text-main);
+			background: #ffffff;
+			color: #111827;
 			cursor: pointer;
 			transition: all 0.2s ease;
 			box-shadow: rgba(0, 0, 0, 0.25) 0px 2px 2px 0px;
@@ -209,30 +227,30 @@
 		}
 
 		.status-badge {
-			font-size: 0.8rem;
+			font-size: 1rem;
 			padding: 4px 8px;
 			border-radius: 0;
-			background: #334155;
-			color: var(--text-muted);
+			background: #ffffff;
+			color: #111827;
 			transition: all 0.2s ease;
 			user-select: none;
 			box-shadow: rgba(0, 0, 0, 0.25) 0px 2px 2px 0px;
 		}
 
 		.status-badge.ready {
-			background: #064e3b;
-			color: #34d399;
+			background: #ffffff;
+			color: #111827;
 			cursor: pointer;
 		}
 
 		.status-badge.ready:hover {
-			background: #047857;
-			color: #10b981;
+			background: #f3f4f6;
+			color: #111827;
 		}
 
 		.status-badge.compiling {
-			background: #78350f;
-			color: #fbbf24;
+			background: #fef3c7;
+			color: #92400e;
 		}
 
 		.status-tooltip {
@@ -374,7 +392,6 @@
 			gap: 6px;
 			letter-spacing: 0.5px;
 		}
-		[data-theme="light"] .sidebar-header { background: rgba(241,245,249,0.8); }
 		.sidebar-actions { display: flex; gap: 4px; }
 		.sidebar-actions .icon-btn { padding: 3px; }
 		.sidebar-toggle-btn {
@@ -478,7 +495,6 @@
 			justify-content: space-between;
 			align-items: center;
 		}
-		[data-theme="light"] .pane-header { background: rgba(241,245,249,0.8); }
 
 		.editor-actions {
 			display: flex;
@@ -528,8 +544,15 @@
 			word-break: break-all;
 			-webkit-overflow-scrolling: touch;
 		}
-		[data-theme="light"] pre { color: #0369a1; }
+		[data-theme="light"] pre { color: #0369a1; background: #f9fafb; }
 		[data-theme="light"] #canvasContainer { background: #e2e8f0; }
+		[data-theme="light"] .settings-popover { background: #ffffff; color: #111827; border-color: #d1d5db; }
+		[data-theme="light"] .settings-popover input { background: #f9fafb; color: #111827; border-color: #d1d5db; }
+		[data-theme="light"] .settings-btn { background: #ffffff; color: #111827; }
+		[data-theme="light"] .menu-btn { background: #ffffff; color: #111827; }
+		[data-theme="light"] .status-tooltip { background: #ffffff; color: #111827; border-color: #d1d5db; }
+		[data-theme="light"] #stdlibDocsPanel { background: #ffffff; }
+		[data-theme="light"] #stdlibDocsClose { background: rgba(0,0,0,0.05); color: #111827; border-color: #d1d5db; }
 
 		#canvasContainer {
 			position: relative;
