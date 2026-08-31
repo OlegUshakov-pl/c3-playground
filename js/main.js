@@ -91,13 +91,17 @@ let leftPercentage = parseFloat(localStorage.getItem("c3_playground_left_percent
 let topPercentage = parseFloat(localStorage.getItem("c3_playground_top_percentage") || "50");
 
 function applyLayout() {
+	const isCollapsed = sidebarEl && sidebarEl.classList.contains("collapsed");
+	const sw = isCollapsed ? 0 : sidebarWidth;
 	if (window.innerWidth <= 768) {
 		mainLayout.style.gridTemplateColumns = "1fr";
-		mainLayout.style.gridTemplateRows = `${topPercentage}% 10px 1fr`;
+		// 5 elements: sidebar, sidebarResizer, editor, resizer, console
+		mainLayout.style.gridTemplateRows = `auto 10px ${topPercentage}% 10px 1fr`;
 	} else {
 		mainLayout.style.gridTemplateRows = "1fr";
-		mainLayout.style.gridTemplateColumns = `${leftPercentage}% 10px 1fr`;
+		mainLayout.style.gridTemplateColumns = `${sw}px 10px ${leftPercentage}% 10px 1fr`;
 	}
+	document.documentElement.style.setProperty("--sidebar-w", sw + "px");
 }
 applyLayout();
 
@@ -118,10 +122,19 @@ resizer.onmousedown = (e) => {
 document.onmousemove = (e) => {
 	if (!isDragging) return;
 	const rect = mainLayout.getBoundingClientRect();
+	const isCollapsed = sidebarEl && sidebarEl.classList.contains("collapsed");
+	const sw = isCollapsed ? 0 : sidebarWidth;
 	if (window.innerWidth <= 768) {
 		topPercentage = Math.max(15, Math.min(85, ((e.clientY - rect.top) / rect.height) * 100));
 	} else {
-		leftPercentage = Math.max(15, Math.min(85, ((e.clientX - rect.left) / rect.width) * 100));
+		// leftPercentage is % of total width; subtract sidebar + resizer offset for accurate drag
+		const effectiveX = e.clientX - rect.left - sw - 10;
+		const effectiveW = rect.width - sw - 20; // minus sidebar and two resizers
+		leftPercentage = Math.max(15, Math.min(85, (effectiveX / effectiveW) * 100));
+		// fallback to old calc if effectiveW too small
+		if (!isFinite(leftPercentage) || effectiveW <= 0) {
+			leftPercentage = Math.max(15, Math.min(85, ((e.clientX - rect.left) / rect.width) * 100));
+		}
 	}
 	applyLayout();
 	if (editor) editor.layout();
@@ -647,6 +660,7 @@ function applySidebarCollapsed(collapsed) {
 		sidebarShowBtn.style.display = "none";
 	}
 	localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
+	applyLayout();
 	if (editor) setTimeout(() => editor.layout(), 50);
 }
 const initiallyCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
@@ -659,8 +673,8 @@ if (newFolderBtn) newFolderBtn.onclick = createFolderPrompt;
 // Sidebar resize
 function applySidebarWidth(w) {
 	sidebarWidth = Math.max(160, Math.min(520, w));
-	document.documentElement.style.setProperty("--sidebar-w", sidebarWidth + "px");
 	localStorage.setItem(SIDEBAR_W_KEY, String(sidebarWidth));
+	applyLayout();
 	if (editor) editor.layout();
 }
 applySidebarWidth(sidebarWidth);
