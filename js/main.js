@@ -427,6 +427,22 @@ if (menuBtn && menuDropdown) {
 	// Reset Layout
 	const menuResetLayout = document.getElementById("menuResetLayout");
 	if (menuResetLayout) menuResetLayout.onclick = () => { closeMenu(); resetLayout(); };
+	// Reset Files
+	const menuResetFiles = document.createElement("button");
+	menuResetFiles.id = "menuResetFiles";
+	menuResetFiles.className = "menu-item";
+	menuResetFiles.role = "menuitem";
+	menuResetFiles.textContent = "Reset Files";
+	menuResetFiles.onclick = () => {
+		closeMenu();
+		if (confirm("Reset file system to default? All unsaved files will be lost.")) {
+			localStorage.removeItem(FS_KEY);
+			localStorage.removeItem(ACTIVE_KEY);
+			localStorage.removeItem("c3_playground_expanded");
+			location.reload();
+		}
+	};
+	if (menuResetLayout) menuResetLayout.after(menuResetFiles);
 	// Keyboard shortcuts for menu
 	document.addEventListener("keydown", (e) => {
 		if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
@@ -472,6 +488,18 @@ function loadFileSystem(initialCodeFallback) {
 		const raw = localStorage.getItem(FS_KEY);
 		if (raw) fileEntries = JSON.parse(raw);
 	} catch {}
+	// Validate entries: keep only unique paths, remove folders without trailing slash
+	fileEntries = fileEntries.filter(e => {
+		if (!e || !e.path) return false;
+		if (e.type === "folder" && !e.path.endsWith("/")) e.path += "/";
+		return true;
+	});
+	const seen = new Set();
+	fileEntries = fileEntries.filter(e => {
+		if (seen.has(e.path)) return false;
+		seen.add(e.path);
+		return true;
+	});
 	if (!Array.isArray(fileEntries) || fileEntries.length === 0) {
 		const fallback = initialCodeFallback || 'module main;\nimport std::io;\n\nfn void main()\n{\n    io::printn("Hello, World!");\n}\n';
 		fileEntries = [{ path: "main.c3", type: "file", content: fallback }];
