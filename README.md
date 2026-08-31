@@ -2,23 +2,24 @@
   <img src="favicon.svg" align="right" height="120" width="120" />
 </a>
 
-# C3 Playground
+# C3 Playground fork of [Manu Linares](https://github.com/ManuLinares/)
 
 **Write, compile and run [C3](https://c3-lang.org) entirely in the browser.**
 
 [![Deploy](https://github.com/manulinares/c3-playground/actions/workflows/main.yml/badge.svg)](https://github.com/manulinares/c3-playground/actions)
-[![Live Demo](https://img.shields.io/badge/demo-live-38bdf8?style=flat&logo=githubpages)](https://manulinares.github.io/c3-playground/)
 [![C3](https://img.shields.io/badge/language-C3-ff7b72?style=flat)](https://c3-lang.org)
 [![License](https://img.shields.io/badge/license-MIT-94a3b8?style=flat)](#license)
 
 <div align="center">
 
-**[▶ Start Coding](https://manulinares.github.io/c3-playground/)**
+**[▶ Start Coding](https://github.com/OlegUshakov-pl/c3-playground)**
 
 No install. No backend. Compiler runs as WebAssembly in a Web Worker.
 
-<img width="900" alt="C3 Playground preview" src="https://github.com/user-attachments/assets/c120d6f2-c011-43f1-a619-831a4a72ba8a" />
-
+<p>
+<a href="screenshots/dark_theme.png"><img src="screenshots/dark_theme.png" width="900" alt="Dark Playground C3" /></a>
+<a href="screenshots/laght_theme.png"><img src="screenshots/light_theme.png" width="900" alt="Light Playground C3" /></a>
+</p>
 </div>
 
 ---
@@ -54,14 +55,14 @@ No install. No backend. Compiler runs as WebAssembly in a Web Worker.
 ## 🚀 Quick Start
 
 ### Use online
-Just open **[manulinares.github.io/c3-playground](https://manulinares.github.io/c3-playground/)**.
+Just open **[manulinares.github.io/c3-playground](https://github.com/OlegUshakov-pl/c3-playground/)**.
 
 ### Run locally (no build needed)
 
 The `dist/` is not committed — but you can run the playground with a pre-built `build/`:
 
 ```bash
-git clone https://github.com/manulinares/c3-playground.git
+git clone https://github.com/OlegUshakov-pl/c3-playground.git
 cd c3-playground
 # if you have a prebuilt build/ folder, just serve:
 npx serve .          # or: python3 -m http.server 8000
@@ -78,7 +79,7 @@ Compiles `c3c` to WebAssembly and patches the Emscripten runtime.
 
 ```bash
 # 1. Clone with c3c
-git clone https://github.com/manulinares/c3-playground.git
+git clone https://github.com/OlegUshakov-pl/c3-playground.git
 cd c3-playground
 git clone --depth 1 https://github.com/c3lang/c3c.git c3c
 
