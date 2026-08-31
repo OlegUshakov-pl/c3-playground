@@ -412,8 +412,7 @@ if (menuBtn && menuDropdown) {
 					types: [{ description: "C3 Source", accept: { "text/plain": [".c3"] } }]
 				});
 				const writable = await handle.createWritable();
-				const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
-				await writable.write(blob);
+				await writable.write(new TextEncoder().encode(code));
 				await writable.close();
 				return;
 			} catch (e) {
@@ -884,7 +883,7 @@ require(['vs/editor/editor.main'], async () => {
 
 	editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveCodeToDisk);
 
-	// 5. Fetch example, update URL query & auto-compile and run immediately
+	// 5. Fetch example, update URL query & load into editor
 	exampleSelect.onchange = async () => {
 		if (!exampleSelect.value) return;
 		clearConsole();
@@ -906,11 +905,6 @@ require(['vs/editor/editor.main'], async () => {
 			newUrl.searchParams.set('example', selectedEx.id);
 			newUrl.hash = '';
 			history.replaceState(null, null, newUrl.toString());
-		}
-
-		// Auto-compile and run the selected example
-		if (!compileBtn.disabled) {
-			compileBtn.click();
 		}
 
 		// Return focus to the editor so the user can read/edit immediately
@@ -1159,8 +1153,7 @@ async function saveCodeToDisk() {
 				types: [{ description: "C3 Source", accept: { "text/plain": [".c3"] } }]
 			});
 			const writable = await handle.createWritable();
-			const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
-			await writable.write(blob);
+			await writable.write(new TextEncoder().encode(code));
 			await writable.close();
 			return;
 		} catch (e) {
