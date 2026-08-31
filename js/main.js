@@ -400,16 +400,28 @@ if (menuBtn && menuDropdown) {
 	};
 	menuOpen.onclick = () => { fileInput.click(); };
 	// Save As...
-	menuSaveAs.onclick = () => {
+	menuSaveAs.onclick = async () => {
 		closeMenu();
 		if (!editor) return;
-		const defaultName = "main.c3";
-		const suggested = prompt("File name:", defaultName);
-		if (suggested === null) return;
-		const filename = suggested.trim() || defaultName;
-		const blob = new Blob([editor.getValue()], { type: "text/plain;charset=utf-8" });
+		const code = editor.getValue();
+		const filename = activeFilePath || "main.c3";
+		if (window.showSaveFilePicker) {
+			try {
+				const handle = await window.showSaveFilePicker({
+					suggestedName: filename,
+					types: [{ description: "C3 Source", accept: { "text/plain": [".c3"] } }]
+				});
+				const writable = await handle.createWritable();
+				await writable.write(code);
+				await writable.close();
+				return;
+			} catch (e) {
+				if (e.name === "AbortError") return;
+			}
+		}
+		const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
 		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a"); a.href = url; a.download = filename;
+		const a = document.createElement("a"); a.href = url; a.download = filename.split("/").pop();
 		document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 	};
 	// Reset Layout
@@ -1135,13 +1147,29 @@ outputEl.onclick = (e) => {
 clearBtn.onclick = clearConsole;
 saveBtn.onclick = saveCodeToDisk;
 
-function saveCodeToDisk() {
+async function saveCodeToDisk() {
 	if (!editor) return;
-	const blob = new Blob([editor.getValue()], { type: 'text/plain;charset=utf-8' });
+	const code = editor.getValue();
+	const filename = activeFilePath || "main.c3";
+	if (window.showSaveFilePicker) {
+		try {
+			const handle = await window.showSaveFilePicker({
+				suggestedName: filename,
+				types: [{ description: "C3 Source", accept: { "text/plain": [".c3"] } }]
+			});
+			const writable = await handle.createWritable();
+			await writable.write(code);
+			await writable.close();
+			return;
+		} catch (e) {
+			if (e.name === "AbortError") return;
+		}
+	}
+	const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;
-	a.download = 'main.c3';
+	a.download = filename.split("/").pop();
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);
