@@ -27,13 +27,14 @@ No install. No backend. Compiler runs as WebAssembly in a Web Worker.
 
 | Area | Details |
 |------|---------|
-| **Zero-setup compiler** | Full `c3c` compiled to WASM via Emscripten, runs in `c3-worker.js` worker (`--target emscripten --linker=builtin`). |
+| **Zero-setup compiler** | Full `c3c` compiled to WASM via Emscripten, runs in `c3-worker.js` (`--target emscripten --linker=builtin`). |
 | **Monaco Editor** | Syntax highlighting, autocomplete, hover docs, go-to-definition, diagnostics — powered by `c3c docgen --json` live DB (`js/monaco-c3.js`). |
 | **Run anything** | Console output, **raylib** 2D/3D graphics, audio (miniaudio/WebAudio), input — rendered on `<canvas>` via `build/emscripten_runtime.js` (GLFW + WebGL2). |
 | **Stdlib Docs** | Offline `docs.html` generated in worker, shown in modal with patched navigation + floating source viewer (`js/docs-iframe-patch.js`). |
 | **Assets** | `// @asset: https://url -> path` directive — auto-fetched and mounted into Emscripten VFS before compile (`js/assets.js`). |
 | **Sharing** | One-click share via `pastes.dev` (`#p=key`), example links (`?example=snake`), save to `main.c3`, copy, URL persistence. |
 | **Compiler flags** | Extra `c3c compile` flags in settings popover (e.g. `-O3 --safe=yes`), persisted in `localStorage`. |
+| **File explorer** | Sidebar with new file/folder, rename, delete, and **Reset Files** option. |
 | **Responsive** | Resizable panes (grid + `ResizeObserver`), mobile layout, fullscreen canvas, AudioContext resume handling. |
 
 ## 📦 Examples
@@ -101,7 +102,7 @@ npx serve dist
 `build.sh` does:
 1. `embuilder build libc libdlmalloc ...` → `build/wasm32-emscripten/*.a`
 2. `emcmake cmake` c3c with `-DC3_WITH_LLVM=ON -DC3_FETCH_LLVM=ON` → `build/c3c.wasm`
-3. Standalone `emscripten_runtime.js` (`USE_GLFW=3 USE_WEBGL2=1 MODULARIZE=1`) + 9 Python patches (dynamic `EM_ASM` proxy, `syncHeapGlobals`, miniaudio bridge, canvas-scoped GLFW keys, clipboard, `InitWindow(0,0)` fix, etc.)
+3. Standalone `emscripten_runtime.js` (`USE_GLFW=3 USE_WEBGL2=1 MODULARIZE=1`) + Python patches (dynamic `EM_ASM` proxy, `syncHeapGlobals`, miniaudio bridge, canvas-scoped GLFW keys, clipboard, `InitWindow(0,0)` fix, etc.)
 4. Assembles `dist/` (`index.html`, `c3-worker.js`, `js/`, `examples/`, `build/`).
 
 ## 🗂 Project Structure
@@ -111,13 +112,13 @@ npx serve dist
 ├── index.html              # Layout, styles, canvas, docs modal
 ├── c3-worker.js            # Worker: compile / docgen / version / read_file / assets
 ├── js/
-│   ├── main.js             # App bootstrap, Monaco, UI, runEmscriptenProgram
+│   ├── main.js             # App bootstrap, Monaco, UI, file explorer, save
 │   ├── compiler.js         # preloadCompilerAssets, executeCompilerTask, stdlib docs cache
 │   ├── monaco-c3.js        # C3 Monarch grammar, completion/hover/definition
 │   ├── assets.js           # @asset parse / fetch / writeVfsFile
 │   ├── examples.js         # Manifest + fetch + prefetch
 │   ├── share.js            # pastes.dev share / ?example= loader
-│   └── docs-iframe-patch.js# srcdoc patch: history, file:// links, source viewer
+│   └── docs-iframe-patch.js # srcdoc patch: history, file:// links, source viewer
 ├── examples/               # 33 .c3 files (tutorials / examples / games / apps / ai)
 ├── lib/raylib6.c3l         # Prebuilt raylib for c3c
 ├── build.sh                # Full WASM build pipeline
@@ -140,7 +141,7 @@ npx serve dist
 [Canvas #canvas] <-- WebGL/GLFW -- [C3EmscriptenRuntime] <-- wasmBinary (/main.wasm)
 ```
 
-Key invariants (`c3-worker.js:15`):
+Key invariants (`c3-worker.js`):
 `--stdlib /usr/lib/c3/std --libdir /usr/lib/c3/lib --lib raylib6 --build-dir /c3build -L /usr/lib/c3/wasm32-emscripten -l c -l dlmalloc ... -z --no-entry --export=main`
 
 ## 🎨 Asset Directive
@@ -157,7 +158,7 @@ import raylib;
 // ... LoadTexture("resources/texture.png");
 ```
 
-Parsing: `js/assets.js:13` (supports `->`/`=>`, `//` and `/* */`).
+Parsing: `js/assets.js` (supports `->`/`=>`, `//` and `/* */`).
 
 ## ⌨️ Shortcuts
 
