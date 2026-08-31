@@ -175,13 +175,10 @@ document.onmouseup = () => {
 };
 // Double-click resizers to reset layout
 if (typeof resizer !== 'undefined' && resizer) resizer.addEventListener("dblclick", resetLayout);
-if (typeof sidebarResizer !== 'undefined' && sidebarResizer) {
-	// sidebarResizer is defined later; attach after init via timeout
-	setTimeout(() => {
-		const sr = document.getElementById("sidebarResizer");
-		if (sr) sr.addEventListener("dblclick", resetLayout);
-	}, 500);
-}
+setTimeout(() => {
+	const sr = document.getElementById("sidebarResizer");
+	if (sr) sr.addEventListener("dblclick", resetLayout);
+}, 500);
 
 // Console & UI Helpers
 function appendConsole(text, isErr = false) {
