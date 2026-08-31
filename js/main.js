@@ -408,11 +408,12 @@ if (menuBtn && menuDropdown) {
 		if (window.showSaveFilePicker) {
 			try {
 				const handle = await window.showSaveFilePicker({
-					suggestedName: filename,
+					suggestedName: filename.split("/").pop(),
 					types: [{ description: "C3 Source", accept: { "text/plain": [".c3"] } }]
 				});
 				const writable = await handle.createWritable();
-				await writable.write(code);
+				const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+				await writable.write(blob);
 				await writable.close();
 				return;
 			} catch (e) {
@@ -1154,11 +1155,12 @@ async function saveCodeToDisk() {
 	if (window.showSaveFilePicker) {
 		try {
 			const handle = await window.showSaveFilePicker({
-				suggestedName: filename,
+				suggestedName: filename.split("/").pop(),
 				types: [{ description: "C3 Source", accept: { "text/plain": [".c3"] } }]
 			});
 			const writable = await handle.createWritable();
-			await writable.write(code);
+			const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+			await writable.write(blob);
 			await writable.close();
 			return;
 		} catch (e) {
