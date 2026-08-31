@@ -19,13 +19,50 @@ echo  ============================
 echo  Serving: %SERVE_DIR%  on  http://localhost:%PORT%/
 echo.
 
-:: Warn if WASM build is missing
+:: Auto-download prebuilt WASM if missing (so Initialization failed doesn't happen)
 if not exist "build\c3c.wasm" (
     if not exist "dist\build\c3c.wasm" (
-        echo  [WARN] build\c3c.wasm not found.
-        echo  Run build.sh via WSL / MSYS2 / Docker first, or place a prebuilt build/ folder.
-        echo  Without it the playground will hang on "Loading...".
+        echo  [WARN] build\c3c.wasm not found - downloading prebuilt compiler from GitHub Pages...
+        echo        ^(36 MB wasm + ~8 MB data, first run only^)
         echo.
+        if not exist "build" mkdir "build" 2>nul
+        set "BASE_URL=https://manulinares.github.io/c3-playground/build"
+        set "DL_OK=1"
+        where curl.exe >nul 2>&1
+        if !ERRORLEVEL!==0 (
+            echo  [DL] c3c.wasm ^(36 MB^)...
+            curl.exe -L --progress-bar -o "build\c3c.wasm" "%BASE_URL%/c3c.wasm"
+            if !ERRORLEVEL! neq 0 set "DL_OK=0"
+            echo  [DL] c3c.data ^(7 MB^)...
+            curl.exe -L --progress-bar -o "build\c3c.data" "%BASE_URL%/c3c.data"
+            if !ERRORLEVEL! neq 0 set "DL_OK=0"
+            echo  [DL] c3c.js...
+            curl.exe -L --progress-bar -o "build\c3c.js" "%BASE_URL%/c3c.js"
+            if !ERRORLEVEL! neq 0 set "DL_OK=0"
+            echo  [DL] emscripten_runtime.js...
+            curl.exe -L --progress-bar -o "build\emscripten_runtime.js" "%BASE_URL%/emscripten_runtime.js"
+            if !ERRORLEVEL! neq 0 set "DL_OK=0"
+        ) else (
+            echo  [DL] curl not found, trying PowerShell...
+            powershell -Command "Invoke-WebRequest -Uri '%BASE_URL%/c3c.wasm' -OutFile 'build\c3c.wasm'"
+            if !ERRORLEVEL! neq 0 set "DL_OK=0"
+            powershell -Command "Invoke-WebRequest -Uri '%BASE_URL%/c3c.data' -OutFile 'build\c3c.data'"
+            if !ERRORLEVEL! neq 0 set "DL_OK=0"
+            powershell -Command "Invoke-WebRequest -Uri '%BASE_URL%/c3c.js' -OutFile 'build\c3c.js'"
+            if !ERRORLEVEL! neq 0 set "DL_OK=0"
+            powershell -Command "Invoke-WebRequest -Uri '%BASE_URL%/emscripten_runtime.js' -OutFile 'build\emscripten_runtime.js'"
+            if !ERRORLEVEL! neq 0 set "DL_OK=0"
+        )
+        if "!DL_OK!"=="1" (
+            echo.
+            echo  [OK] Prebuilt compiler downloaded to build/.
+            echo.
+        ) else (
+            echo.
+            echo  [ERROR] Failed to download prebuilt build/. Check internet connection.
+            echo  Alternatively build locally:  wsl bash build.sh Release latest
+            echo.
+        )
     )
 )
 
