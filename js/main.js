@@ -1,6 +1,6 @@
 // js/main.js
 import { EXAMPLES_MANIFEST, fetchExampleCode, prefetchAllExamples } from './examples.js';
-import { setupMonacoC3, parseCompilerErrors, registerEditorCommands } from './monaco-c3.js';
+import { setupMonacoC3, parseCompilerErrors, registerEditorCommands, applyTheme } from './monaco-c3.js';
 import {
 	preloadCompilerAssets,
 	executeCompilerTask,
@@ -33,8 +33,29 @@ const extraFlagsInput = document.getElementById("extraFlagsInput");
 const canvasFullscreenBtn = document.getElementById("canvasFullscreenBtn");
 const canvasContainer = document.getElementById("canvasContainer");
 
+const menuBtn = document.getElementById("menuBtn");
+const menuDropdown = document.getElementById("menuDropdown");
+const menuNew = document.getElementById("menuNew");
+const menuOpen = document.getElementById("menuOpen");
+const menuSaveAs = document.getElementById("menuSaveAs");
+
 let editor = null;
 let rawConsoleOutput = "";
+let currentTheme = localStorage.getItem("c3_playground_theme") || "dark";
+
+function applyAppTheme(theme) {
+	currentTheme = theme;
+	localStorage.setItem("c3_playground_theme", theme);
+	document.documentElement.setAttribute("data-theme", theme);
+	if (window.monaco && editor) applyTheme(monaco, theme);
+	document.querySelectorAll(".theme-option").forEach(el => {
+		const isActive = el.dataset.themeValue === theme;
+		el.classList.toggle("active", isActive);
+		const check = el.querySelector(".theme-check");
+		if (check) check.style.opacity = isActive ? "1" : "0";
+	});
+}
+document.documentElement.setAttribute("data-theme", currentTheme);
 
 const DEFAULT_COPY_HTML = copyBtn.innerHTML;
 
@@ -265,6 +286,10 @@ document.onclick = (e) => {
 	if (!settingsPopover.contains(e.target) && e.target !== settingsBtn) {
 		settingsPopover.classList.remove("active");
 	}
+	if (menuDropdown && !menuDropdown.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) {
+		menuDropdown.classList.remove("open");
+		menuBtn.setAttribute("aria-expanded", "false");
+	}
 };
 
 export function fitCanvasToContainer() {
@@ -289,6 +314,66 @@ globalThis.fitCanvasToContainer = fitCanvasToContainer;
 const canvasResizeObserver = new ResizeObserver(() => {
 	fitCanvasToContainer();
 });
+
+// Navbar menu
+if (menuBtn && menuDropdown) {
+	const closeMenu = () => { menuDropdown.classList.remove("open"); menuBtn.setAttribute("aria-expanded", "false"); };
+	menuBtn.onclick = (e) => {
+		e.stopPropagation();
+		const isOpen = menuDropdown.classList.toggle("open");
+		menuBtn.setAttribute("aria-expanded", String(isOpen));
+		if (isOpen) settingsPopover.classList.remove("active");
+	};
+	document.querySelectorAll(".theme-option").forEach(btn => {
+		btn.onclick = (e) => { e.stopPropagation(); applyAppTheme(btn.dataset.themeValue); closeMenu(); };
+	});
+	document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+
+	// New
+	const NEW_TEMPLATE = 'module main;\nimport std::io;\n\nfn void main()\n{\n    io::printn("Hello, World!");\n}\n';
+	menuNew.onclick = () => {
+		closeMenu();
+		if (editor && !confirm("Create new file? Unsaved changes will be lost.")) return;
+		if (editor) { editor.setValue(NEW_TEMPLATE); editor.setPosition({ lineNumber: 1, column: 1 }); editor.focus(); }
+		localStorage.setItem("c3_playground_code", NEW_TEMPLATE);
+		exampleSelect.value = "";
+		history.replaceState(null, null, window.location.pathname);
+	};
+	// Open File...
+	const fileInput = document.createElement("input");
+	fileInput.type = "file"; fileInput.accept = ".c3,.c,.h,.txt,*/*"; fileInput.style.display = "none";
+	document.body.appendChild(fileInput);
+	fileInput.onchange = async () => {
+		const file = fileInput.files[0]; if (!file) return;
+		const text = await file.text();
+		if (editor) { editor.setValue(text); editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 }); editor.focus(); }
+		localStorage.setItem("c3_playground_code", text);
+		exampleSelect.value = "";
+		closeMenu();
+		fileInput.value = "";
+	};
+	menuOpen.onclick = () => { fileInput.click(); };
+	// Save As...
+	menuSaveAs.onclick = () => {
+		closeMenu();
+		if (!editor) return;
+		const defaultName = "main.c3";
+		const suggested = prompt("File name:", defaultName);
+		if (suggested === null) return;
+		const filename = suggested.trim() || defaultName;
+		const blob = new Blob([editor.getValue()], { type: "text/plain;charset=utf-8" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a"); a.href = url; a.download = filename;
+		document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+	};
+	// Keyboard shortcuts for menu
+	document.addEventListener("keydown", (e) => {
+		if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+			if (e.key.toLowerCase() === "n") { e.preventDefault(); menuNew.click(); }
+			if (e.key.toLowerCase() === "o") { e.preventDefault(); menuOpen.click(); }
+		}
+	});
+}
 
 if (canvasFullscreenBtn) {
 	canvasFullscreenBtn.onclick = () => {
@@ -370,10 +455,12 @@ require(['vs/editor/editor.main'], async () => {
 	}
 
 	// 3. Create Monaco Instance with Full Settings
+	const initialTheme = localStorage.getItem("c3_playground_theme") || "dark";
+	applyAppTheme(initialTheme);
 	editor = monaco.editor.create(document.getElementById("code"), {
 		value: initialCode,
 		language: 'c3',
-		theme: 'c3PlaygroundTheme',
+		theme: initialTheme === "light" ? "c3PlaygroundThemeLight" : "c3PlaygroundTheme",
 		automaticLayout: true,
 		fontSize: 14,
 		lineHeight: 22,

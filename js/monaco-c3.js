@@ -265,6 +265,38 @@ export function setupMonacoC3(monaco) {
 			'editorLineNumber.activeForeground': '#38bdf8'
 		}
 	});
+	monaco.editor.defineTheme('c3PlaygroundThemeLight', {
+		base: 'vs',
+		inherit: true,
+		rules: [
+			{ token: 'keyword', foreground: 'cf222e', fontStyle: 'bold' },
+			{ token: 'annotation', foreground: 'b35900' },
+			{ token: 'type.identifier', foreground: '116329' },
+			{ token: 'type', foreground: '116329' },
+			{ token: 'comment', foreground: '6e7781', fontStyle: 'italic' },
+			{ token: 'string', foreground: '0a3069' },
+			{ token: 'number', foreground: '0550ae' },
+			{ token: 'operator', foreground: 'cf222e' },
+			{ token: 'function', foreground: '8250df' },
+			{ token: 'identifier', foreground: '24292f' },
+			{ token: 'delimiter', foreground: '24292f' }
+		],
+		colors: {
+			'editor.background': '#ffffff',
+			'editor.foreground': '#24292f',
+			'editor.lineHighlightBackground': '#f1f5f9',
+			'editorCursor.foreground': '#0ea5e9',
+			'editor.selectionBackground': '#b6e3ff88',
+			'editorLineNumber.foreground': '#94a3b8',
+			'editorLineNumber.activeForeground': '#0ea5e9',
+			'editorGutter.background': '#ffffff'
+		}
+	});
+}
+
+export function applyTheme(monaco, theme) {
+	const name = theme === 'light' ? 'c3PlaygroundThemeLight' : 'c3PlaygroundTheme';
+	monaco.editor.setTheme(name);
 }
 
 // Helpers
