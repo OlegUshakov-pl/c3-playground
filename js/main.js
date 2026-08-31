@@ -108,11 +108,12 @@ function resetLayout() {
 
 function applyLayout() {
 	let sw = 260;
+	let isCollapsed = false;
 	try {
 		const el = document.getElementById("sidebar");
 		const wRaw = parseInt(localStorage.getItem("c3_playground_sidebar_w") || "260", 10);
 		const w = Number.isFinite(wRaw) ? wRaw : 260;
-		const isCollapsed = el && el.classList.contains("collapsed");
+		isCollapsed = !!(el && el.classList.contains("collapsed"));
 		sw = isCollapsed ? 0 : w;
 	} catch {}
 	if (window.innerWidth <= 768) {
@@ -120,7 +121,8 @@ function applyLayout() {
 		mainLayout.style.gridTemplateRows = `auto 10px ${topPercentage}% 10px 1fr`;
 	} else {
 		mainLayout.style.gridTemplateRows = "1fr";
-		mainLayout.style.gridTemplateColumns = `${sw}px 10px ${leftPercentage}% 10px 1fr`;
+		const gap1 = isCollapsed ? "0px" : "14px";
+		mainLayout.style.gridTemplateColumns = `${sw}px ${gap1} ${leftPercentage}% 14px 1fr`;
 	}
 	try { document.documentElement.style.setProperty("--sidebar-w", sw + "px"); } catch {}
 }
@@ -149,8 +151,9 @@ document.onmousemove = (e) => {
 		topPercentage = Math.max(15, Math.min(85, ((e.clientY - rect.top) / rect.height) * 100));
 	} else {
 		// leftPercentage is % of total width; subtract sidebar + resizer offset for accurate drag
-		const effectiveX = e.clientX - rect.left - sw - 10;
-		const effectiveW = rect.width - sw - 20; // minus sidebar and two resizers
+		const gap1 = isCollapsed ? 0 : 14;
+		const effectiveX = e.clientX - rect.left - sw - gap1;
+		const effectiveW = rect.width - sw - gap1 - 14; // minus sidebar and two resizers (14px each)
 		leftPercentage = Math.max(15, Math.min(85, (effectiveX / effectiveW) * 100));
 		// fallback to old calc if effectiveW too small
 		if (!isFinite(leftPercentage) || effectiveW <= 0) {
