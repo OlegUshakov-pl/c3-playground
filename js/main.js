@@ -408,8 +408,10 @@ const SIDEBAR_COLLAPSED_KEY = "c3_playground_sidebar_collapsed";
 let fileEntries = []; // {path, type:'file'|'folder', content?}
 let activeFilePath = localStorage.getItem(ACTIVE_KEY) || "";
 let selectedPath = "";
-let expandedFolders = new Set(JSON.parse(localStorage.getItem("c3_playground_expanded") || "[]"));
+let expandedFolders;
+try { expandedFolders = new Set(JSON.parse(localStorage.getItem("c3_playground_expanded") || "[]")); } catch { expandedFolders = new Set(); }
 let sidebarWidth = parseInt(localStorage.getItem(SIDEBAR_W_KEY) || "260", 10);
+if (!Number.isFinite(sidebarWidth)) sidebarWidth = 260;
 let isExplorerInitialized = false;
 
 function saveFileSystem() {
