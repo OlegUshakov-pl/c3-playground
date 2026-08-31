@@ -89,6 +89,22 @@ function showIosWarningOverlay() {
 // Layout Resizer
 let leftPercentage = parseFloat(localStorage.getItem("c3_playground_left_percentage") || "50");
 let topPercentage = parseFloat(localStorage.getItem("c3_playground_top_percentage") || "50");
+if (!Number.isFinite(leftPercentage) || leftPercentage < 15 || leftPercentage > 85) leftPercentage = 50;
+if (!Number.isFinite(topPercentage) || topPercentage < 15 || topPercentage > 85) topPercentage = 50;
+
+function resetLayout() {
+	leftPercentage = 50; topPercentage = 50; sidebarWidth = 260;
+	localStorage.setItem("c3_playground_left_percentage", "50");
+	localStorage.setItem("c3_playground_top_percentage", "50");
+	localStorage.setItem("c3_playground_sidebar_w", "260");
+	localStorage.removeItem("c3_playground_sidebar_collapsed");
+	if (sidebarEl) sidebarEl.classList.remove("collapsed");
+	if (mainLayoutEl) mainLayoutEl.classList.remove("sidebar-collapsed");
+	if (sidebarResizer) sidebarResizer.style.display = "";
+	if (sidebarShowBtn) sidebarShowBtn.style.display = "none";
+	applyLayout();
+	if (editor) setTimeout(() => editor.layout(), 50);
+}
 
 function applyLayout() {
 	let sw = 260;
@@ -157,6 +173,15 @@ document.onmouseup = () => {
 		localStorage.setItem(key, val.toFixed(2));
 	}
 };
+// Double-click resizers to reset layout
+if (typeof resizer !== 'undefined' && resizer) resizer.addEventListener("dblclick", resetLayout);
+if (typeof sidebarResizer !== 'undefined' && sidebarResizer) {
+	// sidebarResizer is defined later; attach after init via timeout
+	setTimeout(() => {
+		const sr = document.getElementById("sidebarResizer");
+		if (sr) sr.addEventListener("dblclick", resetLayout);
+	}, 500);
+}
 
 // Console & UI Helpers
 function appendConsole(text, isErr = false) {
@@ -384,6 +409,9 @@ if (menuBtn && menuDropdown) {
 		const a = document.createElement("a"); a.href = url; a.download = filename;
 		document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 	};
+	// Reset Layout
+	const menuResetLayout = document.getElementById("menuResetLayout");
+	if (menuResetLayout) menuResetLayout.onclick = () => { closeMenu(); resetLayout(); };
 	// Keyboard shortcuts for menu
 	document.addEventListener("keydown", (e) => {
 		if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {

@@ -424,7 +424,7 @@
 		}
 
 		.resizer {
-			width: 10px;
+			width: 14px;
 			cursor: col-resize;
 			background: transparent;
 			display: flex;
@@ -432,6 +432,14 @@
 			justify-content: center;
 			z-index: 10;
 			user-select: none;
+			position: relative;
+		}
+		.resizer::before {
+			content: "";
+			position: absolute;
+			inset: 0;
+			left: -4px;
+			right: -4px;
 		}
 
 		.resizer::after {
@@ -448,6 +456,7 @@
 			background-color: var(--accent);
 			height: 100%;
 		}
+		.pane, .sidebar { min-width: 60px; }
 
 		.pane-header {
 			background: rgba(15, 23, 42, 0.4);
@@ -733,6 +742,7 @@
 					<button id="menuNew" class="menu-item" role="menuitem">New <span class="menu-shortcut">Ctrl+N</span></button>
 					<button id="menuOpen" class="menu-item" role="menuitem">Open File... <span class="menu-shortcut">Ctrl+O</span></button>
 					<button id="menuSaveAs" class="menu-item" role="menuitem">Save As... <span class="menu-shortcut">Ctrl+S</span></button>
+					<button id="menuResetLayout" class="menu-item" role="menuitem">Reset Layout</button>
 					<div class="menu-divider"></div>
 					<div class="menu-submenu" id="themeSubmenu">
 						<button class="menu-item submenu-trigger" aria-haspopup="true">Theme <span>▸</span></button>
