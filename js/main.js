@@ -91,17 +91,22 @@ let leftPercentage = parseFloat(localStorage.getItem("c3_playground_left_percent
 let topPercentage = parseFloat(localStorage.getItem("c3_playground_top_percentage") || "50");
 
 function applyLayout() {
-	const isCollapsed = sidebarEl && sidebarEl.classList.contains("collapsed");
-	const sw = isCollapsed ? 0 : sidebarWidth;
+	let sw = 260;
+	try {
+		const el = document.getElementById("sidebar");
+		const wRaw = parseInt(localStorage.getItem("c3_playground_sidebar_w") || "260", 10);
+		const w = Number.isFinite(wRaw) ? wRaw : 260;
+		const isCollapsed = el && el.classList.contains("collapsed");
+		sw = isCollapsed ? 0 : w;
+	} catch {}
 	if (window.innerWidth <= 768) {
 		mainLayout.style.gridTemplateColumns = "1fr";
-		// 5 elements: sidebar, sidebarResizer, editor, resizer, console
 		mainLayout.style.gridTemplateRows = `auto 10px ${topPercentage}% 10px 1fr`;
 	} else {
 		mainLayout.style.gridTemplateRows = "1fr";
 		mainLayout.style.gridTemplateColumns = `${sw}px 10px ${leftPercentage}% 10px 1fr`;
 	}
-	document.documentElement.style.setProperty("--sidebar-w", sw + "px");
+	try { document.documentElement.style.setProperty("--sidebar-w", sw + "px"); } catch {}
 }
 applyLayout();
 
