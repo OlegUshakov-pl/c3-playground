@@ -444,7 +444,7 @@ let selectedPath = "";
 let expandedFolders;
 try { expandedFolders = new Set(JSON.parse(localStorage.getItem("c3_playground_expanded") || "[]")); } catch { expandedFolders = new Set(); }
 let sidebarWidth = parseInt(localStorage.getItem(SIDEBAR_W_KEY) || "260", 10);
-if (!Number.isFinite(sidebarWidth)) sidebarWidth = 260;
+if (!Number.isFinite(sidebarWidth) || sidebarWidth < 60 || sidebarWidth > 800) sidebarWidth = 260;
 let isExplorerInitialized = false;
 
 function saveFileSystem() {
