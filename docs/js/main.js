@@ -400,60 +400,50 @@ if (menuBtn && menuDropdown) {
 	};
 	menuOpen.onclick = () => { fileInput.click(); };
 	// Open Folder...
-	const folderInput = document.createElement("input");
-	folderInput.type = "file";
-	folderInput.webkitdirectory = "";
-	folderInput.accept = ".c3,.c,.h,.txt,*/*";
-	folderInput.style.display = "none";
-	document.body.appendChild(folderInput);
-	folderInput.onchange = async () => {
-		const files = folderInput.files;
-		if (!files || files.length === 0) return;
-		closeMenu();
-		const newEntries = [];
-		const seenPaths = new Set();
-		for (const file of files) {
-			const path = file.webkitRelativePath;
-			if (!path || seenPaths.has(path)) continue;
-			seenPaths.add(path);
-			const parts = path.split("/");
-			let cur = "";
-			for (let i = 0; i < parts.length - 1; i++) {
-				cur += parts[i] + "/";
-				if (!seenPaths.has(cur)) {
-					seenPaths.add(cur);
-					newEntries.push({ path: cur, type: "folder" });
-				}
-			}
-			const text = await file.text();
-			newEntries.push({ path: path, type: "file", content: text });
-		}
-		if (newEntries.length === 0) return;
-		fileEntries = newEntries;
-		const firstFile = fileEntries.find(e => e.type === "file");
-		activeFilePath = firstFile ? firstFile.path : "";
-		selectedPath = activeFilePath;
-		if (editor && activeFilePath) {
-			const entry = getFileEntry(activeFilePath);
-			if (entry) {
-				editor.setValue(entry.content);
-				editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
-				editor.focus();
-			}
-		}
-		localStorage.setItem("c3_playground_code", editor ? editor.getValue() : "");
-		exampleSelect.value = "";
-		saveFileSystem();
-		renderFileTree();
-		folderInput.value = "";
-	};
-	// Add Open Folder to menu
 	const menuOpenFolder = document.createElement("button");
 	menuOpenFolder.id = "menuOpenFolder";
 	menuOpenFolder.className = "menu-item";
 	menuOpenFolder.role = "menuitem";
 	menuOpenFolder.textContent = "Open Folder...";
-	menuOpenFolder.onclick = () => { folderInput.click(); };
+	menuOpenFolder.onclick = async () => {
+		closeMenu();
+		if (!window.showDirectoryPicker) { alert("Your browser does not support folder opening. Use Chrome or Edge."); return; }
+		try {
+			const dirHandle = await window.showDirectoryPicker();
+			const newEntries = [];
+			const seenPaths = new Set();
+			async function readDir(handle, basePath) {
+				for await (const entry of handle.values()) {
+					const path = basePath ? basePath + "/" + entry.name : entry.name;
+					if (entry.kind === "directory") {
+						if (!seenPaths.has(path + "/")) { seenPaths.add(path + "/"); newEntries.push({ path: path + "/", type: "folder" }); }
+						await readDir(entry, path);
+					} else if (entry.kind === "file") {
+						if (seenPaths.has(path)) continue;
+						seenPaths.add(path);
+						try {
+							const file = await entry.getFile();
+							const text = await file.text();
+							newEntries.push({ path: path, type: "file", content: text });
+						} catch (_) {}
+					}
+				}
+			}
+			await readDir(dirHandle, "");
+			if (newEntries.length === 0) return;
+			fileEntries = newEntries;
+			const firstFile = fileEntries.find(e => e.type === "file");
+			activeFilePath = firstFile ? firstFile.path : "";
+			selectedPath = activeFilePath;
+			if (editor && activeFilePath) {
+				const entry = getFileEntry(activeFilePath);
+				if (entry) { editor.setValue(entry.content); editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 }); editor.focus(); }
+			}
+			localStorage.setItem("c3_playground_code", editor ? editor.getValue() : "");
+			exampleSelect.value = "";
+			saveFileSystem(); renderFileTree();
+		} catch (e) { if (e.name !== "AbortError") console.error("Open Folder error:", e); }
+	};
 	if (menuOpen) menuOpen.after(menuOpenFolder);
 	// Save As...
 	menuSaveAs.onclick = async () => {
