@@ -352,8 +352,35 @@ self.onmessage = function (e) {
 			}
 		}
 
-		Module.FS.writeFile('/main.c3', msg.source);
-		console.log("[Worker] Written main.c3 into virtual file system.");
+		// Multi-file project support: write all files from explorer
+		let compileTargets = ['/main.c3'];
+		if (msg.files && Array.isArray(msg.files) && msg.files.length > 0) {
+			compileTargets = [];
+			for (const f of msg.files) {
+				if (!f || !f.path) continue;
+				const vfsPath = f.path.startsWith('/') ? f.path : '/' + f.path;
+				// Write file content as text
+				try {
+					const dirParts = vfsPath.split('/').filter(Boolean); dirParts.pop();
+					let cur = '';
+					for (const p of dirParts) { cur += '/' + p; try { if (!Module.FS.analyzePath(cur).exists) Module.FS.mkdir(cur); } catch {} }
+					try { Module.FS.unlink(vfsPath); } catch {}
+					Module.FS.writeFile(vfsPath, f.content || '');
+					compileTargets.push(vfsPath);
+				} catch (e) { console.warn("[Worker] Failed to write file", f.path, e); }
+			}
+			// Also keep /main.c3 as entry for backward compat if active file is single-file project
+			if (!compileTargets.includes('/main.c3') && msg.source) {
+				try { Module.FS.writeFile('/main.c3', msg.source); } catch {}
+				// If only one file and its path is not /main.c3, compile that single file
+				if (compileTargets.length === 1) compileTargets = compileTargets;
+				else compileTargets.push('/main.c3');
+			}
+			console.log(`[Worker] Written ${compileTargets.length} source file(s):`, compileTargets.join(', '));
+		} else {
+			Module.FS.writeFile('/main.c3', msg.source);
+			console.log("[Worker] Written main.c3 into virtual file system.");
+		}
 
 		// Helper to tokenize command-line flag string safely
 		function parseFlags(str) {
@@ -373,6 +400,7 @@ self.onmessage = function (e) {
 		const maxMemDefault = hasMaxMem ? [] : ['--max-mem', '64'];
 
 		console.log("[Worker] Calling Module.callMain compiler command...");
+		const entryFiles = (typeof compileTargets !== 'undefined' && compileTargets.length > 0) ? compileTargets : ['/main.c3'];
 		const exitCode = Module.callMain([
 			'compile',
 			...maxMemDefault,
@@ -400,7 +428,7 @@ self.onmessage = function (e) {
 			'-z', '--allow-undefined',
 			'-z', '-zstack-size=1048576',
 			...userFlags,
-			'/main.c3'
+			...entryFiles
 		]);
 
 		console.log(`[Worker] callMain finished with exitCode: ${exitCode}`);

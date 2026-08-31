@@ -60,7 +60,7 @@ export async function preloadCompilerAssets(onStatusChange) {
 	await Promise.all([wasmPromise, jsPromise, dataPromise, workerPromise, patchPromise]);
 }
 
-export function executeCompilerTask(taskType, sourceCode, onMessageCallback, extraFlags = '', setStatusCallback, assets = []) {
+export function executeCompilerTask(taskType, sourceCode, onMessageCallback, extraFlags = '', setStatusCallback, assets = [], extraFiles = []) {
 	if (isAnyCompilerTaskRunning) {
 		if (activeWorker && (activeTaskType === "docgen" || activeTaskType === "version")) {
 			activeWorker.terminate();
@@ -108,7 +108,8 @@ export function executeCompilerTask(taskType, sourceCode, onMessageCallback, ext
 				type: taskType,
 				source: sourceCode,
 				extraFlags: extraFlags,
-				assets: assets
+				assets: assets,
+				files: extraFiles
 			});
 			return;
 		}

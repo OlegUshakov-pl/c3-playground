@@ -375,6 +375,310 @@ if (menuBtn && menuDropdown) {
 	});
 }
 
+// ── File Explorer Sidebar (FILES) ──
+const sidebarEl = document.getElementById("sidebar");
+const fileTreeEl = document.getElementById("fileTree");
+const newFileBtn = document.getElementById("newFileBtn");
+const newFolderBtn = document.getElementById("newFolderBtn");
+const sidebarCollapseBtn = document.getElementById("sidebarCollapseBtn");
+const sidebarShowBtn = document.getElementById("sidebarShowBtn");
+const sidebarResizer = document.getElementById("sidebarResizer");
+const activeFileLabel = document.getElementById("activeFileLabel");
+const mainLayoutEl = document.getElementById("mainLayout");
+const fileContextMenu = document.getElementById("fileContextMenu");
+
+const FS_KEY = "c3_playground_files";
+const ACTIVE_KEY = "c3_playground_active_file";
+const SIDEBAR_W_KEY = "c3_playground_sidebar_w";
+const SIDEBAR_COLLAPSED_KEY = "c3_playground_sidebar_collapsed";
+
+let fileEntries = []; // {path, type:'file'|'folder', content?}
+let activeFilePath = localStorage.getItem(ACTIVE_KEY) || "";
+let selectedPath = "";
+let expandedFolders = new Set(JSON.parse(localStorage.getItem("c3_playground_expanded") || "[]"));
+let sidebarWidth = parseInt(localStorage.getItem(SIDEBAR_W_KEY) || "260", 10);
+let isExplorerInitialized = false;
+
+function saveFileSystem() {
+	localStorage.setItem(FS_KEY, JSON.stringify(fileEntries));
+	localStorage.setItem(ACTIVE_KEY, activeFilePath);
+	localStorage.setItem("c3_playground_expanded", JSON.stringify([...expandedFolders]));
+}
+function loadFileSystem(initialCodeFallback) {
+	try {
+		const raw = localStorage.getItem(FS_KEY);
+		if (raw) fileEntries = JSON.parse(raw);
+	} catch {}
+	if (!Array.isArray(fileEntries) || fileEntries.length === 0) {
+		const fallback = initialCodeFallback || 'module main;\nimport std::io;\n\nfn void main()\n{\n    io::printn("Hello, World!");\n}\n';
+		fileEntries = [{ path: "main.c3", type: "file", content: fallback }];
+		activeFilePath = "main.c3";
+		saveFileSystem();
+	}
+	if (!fileEntries.some(e => e.path === activeFilePath && e.type === "file")) {
+		const firstFile = fileEntries.find(e => e.type === "file");
+		activeFilePath = firstFile ? firstFile.path : "";
+	}
+	selectedPath = activeFilePath;
+}
+function getFileEntry(path) { return fileEntries.find(e => e.path === path); }
+function getAllFileContents() {
+	return fileEntries.filter(e => e.type === "file").map(e => ({ path: e.path, content: e.content || "" }));
+}
+function normalizePath(input, baseFolder) {
+	let p = input.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+	if (!p) return "";
+	if (baseFolder && !p.includes("/")) p = baseFolder.replace(/\/$/, "") + "/" + p;
+	if (!p.endsWith(".c3") && !p.includes(".")) {
+		// keep as is for folders; files should have extension but allow any
+	}
+	return p;
+}
+function ensureUniquePath(path) {
+	if (!fileEntries.some(e => e.path === path)) return path;
+	let i = 1;
+	const dot = path.lastIndexOf(".");
+	const base = dot > 0 ? path.slice(0, dot) : path;
+	const ext = dot > 0 ? path.slice(dot) : "";
+	while (fileEntries.some(e => e.path === `${base}_${i}${ext}`)) i++;
+	return `${base}_${i}${ext}`;
+}
+function getSelectedFolder() {
+	if (!selectedPath) return "";
+	const sel = getFileEntry(selectedPath);
+	if (sel && sel.type === "folder") return sel.path;
+	if (sel && sel.type === "file") {
+		const idx = sel.path.lastIndexOf("/");
+		return idx >= 0 ? sel.path.slice(0, idx + 1) : "";
+	}
+	return "";
+}
+function createFilePrompt() {
+	const folder = getSelectedFolder();
+	const hint = folder ? folder + "new_file.c3" : "new_file.c3";
+	const name = prompt(`New file name:\n(e.g. ${hint} or src/utils.c3)`, hint);
+	if (name === null) return;
+	let p = normalizePath(name, "");
+	if (!p) return alert("Invalid name");
+	if (!p.includes(".")) p += ".c3";
+	p = ensureUniquePath(p);
+	// ensure parent folders exist as explicit folder entries
+	const parts = p.split("/"); parts.pop();
+	let cur = "";
+	for (const part of parts) { cur += part + "/"; if (!fileEntries.some(e => e.path === cur)) fileEntries.push({ path: cur, type: "folder" }); expandedFolders.add(cur); }
+	fileEntries.push({ path: p, type: "file", content: `module ${p.replace(/[^a-zA-Z0-9]/g, "_")} ;\n\nfn void foo()\n{\n}\n` });
+	activeFilePath = p; selectedPath = p; saveFileSystem(); renderFileTree(); openFile(p);
+}
+function createFolderPrompt() {
+	const folder = getSelectedFolder();
+	const name = prompt(`New folder name:\n(parent: ${folder || "/"})`, "new_folder");
+	if (name === null) return;
+	let p = name.trim().replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+	if (!p) return alert("Invalid name");
+	let full = (folder ? folder : "") + p + "/";
+	full = full.replace(/\/+/g, "/");
+	if (fileEntries.some(e => e.path === full)) return alert("Folder already exists");
+	fileEntries.push({ path: full, type: "folder" });
+	expandedFolders.add(full);
+	selectedPath = full;
+	saveFileSystem(); renderFileTree();
+}
+function deletePath(path) {
+	const entry = getFileEntry(path); if (!entry) return;
+	if (!confirm(`Delete "${path}"?`)) return;
+	fileEntries = fileEntries.filter(e => e.path !== path && !e.path.startsWith(path));
+	if (activeFilePath === path || activeFilePath.startsWith(path)) {
+		const fallback = fileEntries.find(e => e.type === "file");
+		activeFilePath = fallback ? fallback.path : "";
+		if (fallback && editor) openFile(activeFilePath);
+	}
+	saveFileSystem(); renderFileTree();
+	if (!fileEntries.some(e => e.type === "file")) {
+		fileEntries.push({ path: "main.c3", type: "file", content: 'module main;\nimport std::io;\n\nfn void main()\n{\n    io::printn("Hello");\n}\n' });
+		activeFilePath = "main.c3"; saveFileSystem(); renderFileTree(); if (editor) openFile(activeFilePath);
+	}
+}
+function renamePath(oldPath) {
+	const entry = getFileEntry(oldPath); if (!entry) return;
+	const newName = prompt(`Rename "${oldPath}" to:`, oldPath);
+	if (newName === null) return;
+	let np = newName.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+	if (!np) return;
+	if (entry.type === "folder" && !np.endsWith("/")) np += "/";
+	if (fileEntries.some(e => e.path === np)) return alert("Name already exists");
+	const isFolder = entry.type === "folder";
+	fileEntries.forEach(e => {
+		if (e.path === oldPath) e.path = np;
+		else if (isFolder && e.path.startsWith(oldPath)) e.path = np + e.path.slice(oldPath.length);
+	});
+	if (activeFilePath === oldPath) activeFilePath = np;
+	else if (isFolder && activeFilePath.startsWith(oldPath)) activeFilePath = np + activeFilePath.slice(oldPath.length);
+	if (selectedPath === oldPath) selectedPath = np;
+	saveFileSystem(); renderFileTree();
+	if (editor && getFileEntry(activeFilePath)) openFile(activeFilePath);
+}
+function openFile(path) {
+	const entry = getFileEntry(path); if (!entry || entry.type !== "file") return;
+	activeFilePath = path; selectedPath = path;
+	document.querySelectorAll(".file-item.active").forEach(el => el.classList.remove("active"));
+	saveFileSystem(); renderFileTree();
+	const content = entry.content || "";
+	if (editor) {
+		const pos = editor.getPosition();
+		editor.setValue(content);
+		if (pos) editor.setPosition(pos);
+		editor.focus();
+		activeFileLabel.textContent = "— " + path;
+	} else {
+		activeFileLabel.textContent = "— " + path;
+		localStorage.setItem("c3_playground_code", content);
+	}
+}
+function buildTree() {
+	const root = { name: "", path: "", type: "folder", children: new Map() };
+	for (const e of fileEntries) {
+		const parts = e.path.split("/").filter(Boolean);
+		const isFolder = e.type === "folder";
+		let cur = root;
+		let curPath = "";
+		for (let i = 0; i < parts.length; i++) {
+			const part = parts[i];
+			const isLast = i === parts.length - 1;
+			curPath += part + (isLast && isFolder ? "/" : (i < parts.length - 1 ? "/" : ""));
+			let child = cur.children.get(part);
+			if (!child) {
+				const nodeIsFolder = !isLast || isFolder;
+				child = { name: part, path: curPath, type: nodeIsFolder ? "folder" : "file", entry: isLast ? e : null, children: new Map() };
+				cur.children.set(part, child);
+			} else if (isLast) {
+				child.entry = e;
+				child.type = e.type;
+				child.path = e.path;
+			}
+			cur = child;
+		}
+	}
+	return root;
+}
+function renderFileTree() {
+	if (!fileTreeEl) return;
+	const root = buildTree();
+	fileTreeEl.innerHTML = "";
+	if (fileEntries.length === 0) {
+		fileTreeEl.innerHTML = `<div class="sidebar-empty">No files yet.<br>Click + to create.</div>`;
+		return;
+	}
+	const renderNode = (node, depth) => {
+		const container = document.createElement("div");
+		for (const child of [...node.children.values()].sort((a,b) => {
+			if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+			return a.name.localeCompare(b.name);
+		})) {
+			const isFolder = child.type === "folder";
+			const item = document.createElement("div");
+			item.className = `file-item ${isFolder ? "folder" : "file"} ${selectedPath === child.path || activeFilePath === child.path ? "active" : ""}`;
+			item.dataset.path = child.path;
+			const indent = depth * 10;
+			item.style.paddingLeft = (6 + indent) + "px";
+			const icon = isFolder
+				? (expandedFolders.has(child.path) ? `<svg class="file-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>` : `<svg class="file-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`)
+				: `<svg class="file-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+			const chevron = isFolder ? `<span style="font-size:0.7rem;opacity:0.6">${expandedFolders.has(child.path) ? "▾" : "▸"}</span>` : "";
+			item.innerHTML = `${chevron} ${icon} <span class="file-name">${child.name}${isFolder ? "/" : ""}</span>`;
+			item.onclick = (e) => {
+				e.stopPropagation();
+				selectedPath = child.path;
+				if (isFolder) {
+					if (expandedFolders.has(child.path)) expandedFolders.delete(child.path); else expandedFolders.add(child.path);
+					saveFileSystem(); renderFileTree();
+				} else {
+					openFile(child.path);
+				}
+			};
+			item.oncontextmenu = (e) => { e.preventDefault(); selectedPath = child.path; renderFileTree(); showContextMenu(e.clientX, e.clientY, child.path); };
+			container.appendChild(item);
+			if (isFolder && expandedFolders.has(child.path)) {
+				const nested = document.createElement("div");
+				nested.className = "file-nested";
+				nested.appendChild(renderNode(child, depth + 1));
+				container.appendChild(nested);
+			}
+		}
+		return container;
+	};
+	fileTreeEl.appendChild(renderNode(root, 0));
+	if (activeFilePath) activeFileLabel.textContent = "— " + activeFilePath;
+	else activeFileLabel.textContent = "";
+}
+function showContextMenu(x, y, path) {
+	if (!fileContextMenu) return;
+	fileContextMenu.innerHTML = `
+		<button class="menu-item" data-act="rename">Rename</button>
+		<button class="menu-item" data-act="delete" style="color:#f87171">Delete</button>
+	`;
+	fileContextMenu.style.left = x + "px";
+	fileContextMenu.style.top = y + "px";
+	fileContextMenu.style.display = "flex";
+	fileContextMenu.classList.add("open");
+	fileContextMenu.querySelectorAll("button").forEach(btn => {
+		btn.onclick = () => {
+			hideContextMenu();
+			if (btn.dataset.act === "rename") renamePath(path);
+			if (btn.dataset.act === "delete") deletePath(path);
+		};
+	});
+}
+function hideContextMenu() { if (fileContextMenu) { fileContextMenu.style.display = "none"; fileContextMenu.classList.remove("open"); } }
+document.addEventListener("click", hideContextMenu);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideContextMenu(); });
+
+// Sidebar collapse / expand
+function applySidebarCollapsed(collapsed) {
+	if (!sidebarEl || !mainLayoutEl) return;
+	if (collapsed) {
+		sidebarEl.classList.add("collapsed");
+		mainLayoutEl.classList.add("sidebar-collapsed");
+		sidebarResizer.style.display = "none";
+		sidebarShowBtn.style.display = "";
+	} else {
+		sidebarEl.classList.remove("collapsed");
+		mainLayoutEl.classList.remove("sidebar-collapsed");
+		sidebarResizer.style.display = "";
+		sidebarShowBtn.style.display = "none";
+	}
+	localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
+	if (editor) setTimeout(() => editor.layout(), 50);
+}
+const initiallyCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+applySidebarCollapsed(initiallyCollapsed);
+if (sidebarCollapseBtn) sidebarCollapseBtn.onclick = () => applySidebarCollapsed(true);
+if (sidebarShowBtn) sidebarShowBtn.onclick = () => applySidebarCollapsed(false);
+if (newFileBtn) newFileBtn.onclick = createFilePrompt;
+if (newFolderBtn) newFolderBtn.onclick = createFolderPrompt;
+
+// Sidebar resize
+function applySidebarWidth(w) {
+	sidebarWidth = Math.max(160, Math.min(520, w));
+	document.documentElement.style.setProperty("--sidebar-w", sidebarWidth + "px");
+	localStorage.setItem(SIDEBAR_W_KEY, String(sidebarWidth));
+	if (editor) editor.layout();
+}
+applySidebarWidth(sidebarWidth);
+if (sidebarResizer) {
+	let dragging = false;
+	sidebarResizer.addEventListener("mousedown", (e) => { dragging = true; sidebarResizer.classList.add("dragging"); document.body.style.cursor = "col-resize"; document.body.style.userSelect = "none"; e.preventDefault(); });
+	document.addEventListener("mousemove", (e) => {
+		if (!dragging) return;
+		const rect = mainLayoutEl.getBoundingClientRect();
+		const newW = e.clientX - rect.left - 12; // 12 = main padding
+		applySidebarWidth(newW);
+	});
+	document.addEventListener("mouseup", () => {
+		if (!dragging) return;
+		dragging = false; sidebarResizer.classList.remove("dragging"); document.body.style.cursor = ""; document.body.style.userSelect = "";
+	});
+}
+
 if (canvasFullscreenBtn) {
 	canvasFullscreenBtn.onclick = () => {
 		if (!document.fullscreenElement) {
@@ -401,6 +705,8 @@ require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.56.0
 
 require(['vs/editor/editor.main'], async () => {
 	setupMonacoC3(monaco);
+	// Init file system before UI (uses saved files if any)
+	loadFileSystem();
 
 	// 1. Populate Examples Dropdown with Categorized optgroup Sections
 	exampleSelect.replaceChildren();
@@ -433,10 +739,11 @@ require(['vs/editor/editor.main'], async () => {
 		exampleSelect.appendChild(group);
 	}
 
-	// 2. Load Initial Code (supporting URL example, paste snippet, or localStorage)
+	// 2. Load Initial Code (supporting URL example, paste snippet, or file explorer)
 	const shared = await getSharedCode();
 	let initialCode = "";
 	let matchedExampleFile = null;
+	let fromExplorer = false;
 
 	if (shared && shared.type === 'example') {
 		const found = EXAMPLES_MANIFEST.find(e => e.id === shared.id || e.file === shared.id);
@@ -449,9 +756,23 @@ require(['vs/editor/editor.main'], async () => {
 	}
 
 	if (!initialCode) {
-		const savedCode = localStorage.getItem("c3_playground_code");
-		initialCode = savedCode || await fetchExampleCode(EXAMPLES_MANIFEST[0].file);
-		if (!savedCode) matchedExampleFile = EXAMPLES_MANIFEST[0].file;
+		// Prefer file explorer active file
+		const activeEntry = getFileEntry(activeFilePath);
+		if (activeEntry && activeEntry.type === "file" && activeEntry.content) {
+			initialCode = activeEntry.content;
+			fromExplorer = true;
+		} else {
+			const savedCode = localStorage.getItem("c3_playground_code");
+			if (savedCode) initialCode = savedCode;
+			else { initialCode = await fetchExampleCode(EXAMPLES_MANIFEST[0].file); matchedExampleFile = EXAMPLES_MANIFEST[0].file; }
+		}
+	}
+	// Ensure fileEntries reflect initialCode if not from explorer
+	if (!fromExplorer && initialCode) {
+		const entry = getFileEntry(activeFilePath);
+		if (entry) entry.content = initialCode;
+		else if (activeFilePath) fileEntries.push({ path: activeFilePath, type: "file", content: initialCode });
+		saveFileSystem();
 	}
 
 	// 3. Create Monaco Instance with Full Settings
@@ -480,11 +801,14 @@ require(['vs/editor/editor.main'], async () => {
 	editor.layout();
 	editor.focus();
 	registerEditorCommands(monaco);
+	renderFileTree();
 
 	// 4. Save edits & reset dropdown placeholder when code changes
 	editor.onDidChangeModelContent(() => {
 		const code = editor.getValue();
 		localStorage.setItem("c3_playground_code", code);
+		const ent = getFileEntry(activeFilePath);
+		if (ent) { ent.content = code; saveFileSystem(); }
 		exampleSelect.value = "";
 		queueDocgenUpdate(code);
 	});
@@ -501,6 +825,9 @@ require(['vs/editor/editor.main'], async () => {
 		clearConsole();
 		const selectedFile = exampleSelect.value;
 		const code = await fetchExampleCode(selectedFile);
+		// Write to active explorer file as well
+		const ent = getFileEntry(activeFilePath);
+		if (ent) { ent.content = code; saveFileSystem(); renderFileTree(); }
 		editor.setValue(code);
 		editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
 		editor.setPosition({ lineNumber: 1, column: 1 });
@@ -532,6 +859,9 @@ require(['vs/editor/editor.main'], async () => {
 		clearConsole();
 
 		const codeValue = editor.getValue();
+		// Sync active file before compile (multi-file project)
+		{ const ent = getFileEntry(activeFilePath); if (ent) { ent.content = codeValue; saveFileSystem(); } }
+		const extraFiles = getAllFileContents().map(f => f.path === activeFilePath ? { path: f.path, content: codeValue } : f);
 		const assetDirectives = parseAssetDirectives(codeValue);
 		let fetchedAssets = [];
 
@@ -569,7 +899,7 @@ require(['vs/editor/editor.main'], async () => {
 				const markers = parseCompilerErrors(compileStderrBuffer.join('\n'), editor.getModel(), monaco);
 				monaco.editor.setModelMarkers(editor.getModel(), "c3", markers);
 			}
-		}, extraFlagsInput.value, setStatus, fetchedAssets);
+		}, extraFlagsInput.value, setStatus, fetchedAssets, extraFiles);
 	};
 
 	try {

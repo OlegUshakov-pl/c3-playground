@@ -336,11 +336,83 @@
 		main {
 			flex: 1;
 			display: grid;
-			grid-template-columns: 1fr 10px 1fr;
+			grid-template-columns: var(--sidebar-w, 260px) 10px 1fr 10px 1fr;
 			padding: 12px;
 			overflow: hidden;
 			box-sizing: border-box;
 		}
+		main.sidebar-collapsed { --sidebar-w: 0px; }
+
+		.sidebar {
+			background: var(--panel-bg);
+			border: 1px solid var(--border);
+			border-radius: 8px;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+			min-width: 0;
+		}
+		.sidebar.collapsed { display: none; }
+		.sidebar-header {
+			background: rgba(15,23,42,0.4);
+			padding: 8px 10px;
+			font-size: 0.8rem;
+			font-weight: 700;
+			color: var(--text-muted);
+			border-bottom: 1px solid var(--border);
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 6px;
+			letter-spacing: 0.5px;
+		}
+		[data-theme="light"] .sidebar-header { background: rgba(241,245,249,0.8); }
+		.sidebar-actions { display: flex; gap: 4px; }
+		.sidebar-actions .icon-btn { padding: 3px; }
+		.sidebar-toggle-btn {
+			background: transparent;
+			border: 1px solid transparent;
+			color: var(--text-muted);
+			padding: 3px 6px;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+		.sidebar-toggle-btn:hover { color: var(--accent); border-color: var(--border); background: rgba(56,189,248,0.08); }
+		.file-tree {
+			flex: 1;
+			overflow-y: auto;
+			padding: 6px 4px;
+			font-size: 0.82rem;
+			line-height: 1.4;
+			user-select: none;
+		}
+		.file-item {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			padding: 4px 6px;
+			border-radius: 4px;
+			cursor: pointer;
+			color: var(--text-main);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.file-item:hover { background: rgba(56,189,248,0.1); }
+		.file-item.active { background: rgba(56,189,248,0.18); color: var(--accent); font-weight: 600; }
+		.file-item.folder { font-weight: 600; color: var(--text-muted); }
+		.file-item .file-icon { flex-shrink: 0; opacity: 0.8; }
+		.file-item .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+		.file-item .file-actions { display: none; gap: 2px; }
+		.file-item:hover .file-actions { display: flex; }
+		.file-item .mini-btn {
+			background: transparent; border: none; color: var(--text-muted);
+			padding: 2px 4px; border-radius: 3px; cursor: pointer; font-size: 0.75rem;
+		}
+		.file-item .mini-btn:hover { color: var(--accent); background: rgba(56,189,248,0.12); }
+		.file-nested { margin-left: 14px; border-left: 1px dotted var(--border); padding-left: 4px; }
+		.file-drop-target { background: rgba(56,189,248,0.22) !important; outline: 1px dashed var(--accent); }
+		.sidebar-empty { padding: 16px 10px; color: var(--text-muted); font-size: 0.8rem; text-align: center; line-height: 1.5; }
 
 		.pane {
 			background: var(--panel-bg);
@@ -534,8 +606,11 @@
 		@media (max-width: 768px) {
 			main {
 				grid-template-columns: 1fr !important;
-				grid-template-rows: 1fr 10px 1fr;
+				grid-template-rows: auto 10px 1fr 10px 1fr;
 			}
+			.sidebar { max-height: 220px; }
+			.sidebar.collapsed { display: flex; } /* on mobile show as top panel */
+			main.sidebar-collapsed { --sidebar-w: 0px; } /* ignore on mobile */
 
 			.resizer {
 				width: 100%;
@@ -703,9 +778,31 @@
 	</header>
 
 	<main id="mainLayout">
-		<div class="pane">
+		<div id="sidebar" class="sidebar">
+			<div class="sidebar-header">
+				<span style="display:flex;align-items:center;gap:6px;">
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+					FILES
+				</span>
+				<div class="sidebar-actions">
+					<button id="newFileBtn" class="icon-btn" title="New File"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></button>
+					<button id="newFolderBtn" class="icon-btn" title="New Folder"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></button>
+					<button id="sidebarCollapseBtn" class="sidebar-toggle-btn" title="Collapse Sidebar">◀</button>
+				</div>
+			</div>
+			<div id="fileTree" class="file-tree"></div>
+			<div id="fileContextMenu" class="menu-dropdown" style="position:fixed;min-width:160px;display:none;z-index:2000;"></div>
+		</div>
+
+		<div class="resizer" id="sidebarResizer" title="Drag to resize sidebar"></div>
+
+		<div class="pane" id="editorPane">
 			<div class="pane-header">
-				<span>SOURCE CODE (C3)</span>
+				<span style="display:flex;align-items:center;gap:8px;">
+					<button id="sidebarShowBtn" class="sidebar-toggle-btn" title="Show Explorer" style="display:none;">▶</button>
+					<span>SOURCE CODE (C3)</span>
+					<span id="activeFileLabel" style="font-weight:400;font-size:0.78rem;color:var(--text-muted);"></span>
+				</span>
 				<div class="editor-actions">
 					<button id="shareBtn" title="Share Code" class="icon-btn">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
