@@ -11,7 +11,7 @@
 
 <div align="center">
 
-**[▶ Start Coding](https://github.com/OlegUshakov-pl/c3-playground)**
+**[▶ Start Coding](https://olegushakov-pl.github.io/c3-playground/)**
 
 No install. No backend. Compiler runs as WebAssembly in a Web Worker.
 
