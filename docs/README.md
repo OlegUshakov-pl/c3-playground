@@ -54,7 +54,7 @@ No install. No backend. Compiler runs as WebAssembly in a Web Worker.
 ## 🚀 Quick Start
 
 ### Use online
-Just open **[[olegushakov-pl.github.io/c3-playground](https://olegushakov-pl.github.io/c3-playground/)](https://github.com/OlegUshakov-pl/c3-playground/)**.
+Just open **[olegushakov-pl.github.io/c3-playground](https://olegushakov-pl.github.io/c3-playground/)](https://github.com/OlegUshakov-pl/c3-playground/)**.
 
 ### Run locally (no build needed)
 
